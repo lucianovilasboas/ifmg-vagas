@@ -34,7 +34,7 @@ if uploaded_file is not None:
             for idx, cota in enumerate(ordem_form):
                 with cols[idx]:
                     label = f"{cota[1]} {cota[0]}"
-                    vagas[cota] = int(st.number_input(label, min_value=0, value=0))
+                    vagas[cota[0]] = int(st.number_input(label, min_value=0, value=0))
 
             submitted = st.form_submit_button("Processar Ocupação")
         vagas_ocupadas = vagas.copy()
