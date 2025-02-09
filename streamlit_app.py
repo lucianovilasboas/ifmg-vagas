@@ -56,7 +56,7 @@ if uploaded_file is not None:
 
             
             def primeira_ocupacao(grupo_vagas_inscrito, df_filter): 
-                global vagas, filtros, vagas_ocupadas
+                # global vagas, filtros, vagas_ocupadas
 
                 num_vagas = vagas[grupo_vagas_inscrito]
                 cotas_no_filtro = filtros[grupo_vagas_inscrito]
@@ -75,7 +75,7 @@ if uploaded_file is not None:
             
 
             def remanejar_vagas(df_filter):
-                global vagas_ocupadas, regras_remanejamento, filtros
+                # global vagas_ocupadas, regras_remanejamento, filtros
 
                 for cota in vagas_ocupadas:
                     n_vagas_restantes = vagas_ocupadas[cota]
