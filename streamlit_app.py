@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
 import io
-from config import ordem_form, fluxo, filtros, regras_remanejamento, filter_situacao_geral
+from config import ordem_form, fluxo, filtros, regras_remanejamento, filter_situacao_geral, color_map
 
 st.set_page_config(page_title="Ocupação de Vagas - IFMG", page_icon="🎯", layout="wide")
 
 vagas = {}
-vagas_ocupadas = {}
+vagas_nao_ocupadas = {}
 valores = []
 
 
@@ -25,6 +25,7 @@ if uploaded_file is not None:
 
     
     cursos_disponiveis = df["Curso"].unique().tolist()
+    campus = df["Campus"].unique().tolist()
     curso_selecionado = st.selectbox("Selecione o curso", cursos_disponiveis)
     
     if curso_selecionado:
@@ -58,11 +59,34 @@ if uploaded_file is not None:
                     vagas[cota[0]] = int(st.number_input(label, min_value=0, value=valores[idx] if len(valores)>0 else 0))
 
             submitted = st.form_submit_button("Processar Ocupação")
-        vagas_ocupadas = vagas.copy()
+        vagas_nao_ocupadas = vagas.copy()
 
         if submitted:
     
+            # Função para colorir as células com base na nota
+            def highlight_grades(val):
+                color = 'green' if val >= 25 else 'red'
+                return f'background-color: {color}; color: white;'
+    
+            def highlight_mismatch(row):
+                if row['Confere_1'] == row['Confere_2']:
+                    return ['background-color: red; color: white'] * len(row)
+                return [''] * len(row)
+            
+            # Função para aplicar a cor de fundo com base na cota
+            def highlight_cota(row):
+                cota = row['Grupo_vagas_chamado_']
+                color = color_map.get(cota, "white")  # Branco se não encontrar
+                return [f'background-color: {color}; color: black;'] * len(row)
+
+
+            # --- Funções para ocupação de vagas ---
+
+
             def ocupar_vagas(df_filter):
+                """ 
+                    Função principal para ocupação de vagas. 
+                """
                 ocupacao_inicial_todas(df_filter)
                 remanejar_vagas(df_filter)
                 
@@ -87,16 +111,17 @@ if uploaded_file is not None:
                     Caso não haja vagas suficientes, a cota será preenchida parcialmente.
                 
                 """
-                # global vagas, filtros, vagas_ocupadas
+                # global vagas, filtros, vagas_nao_ocupadas
 
                 num_vagas = vagas.get(grupo_vagas_inscrito, 0)
                 cotas_no_filtro = filtros[grupo_vagas_inscrito]
+
                 linhas_filtradas = df_filter[(df_filter["Grupo de vagas inscrito"].isin(cotas_no_filtro)) &\
                                             (df_filter["Grupo_vagas_chamado_"] == "")]\
                                             .head(num_vagas)
                 
-                vagas_ocupadas[grupo_vagas_inscrito] = num_vagas - linhas_filtradas.shape[0]
-                print(grupo_vagas_inscrito,f"num_vagas: [{num_vagas}]", "->",vagas_ocupadas[grupo_vagas_inscrito])
+                vagas_nao_ocupadas[grupo_vagas_inscrito] = num_vagas - linhas_filtradas.shape[0]
+                print(grupo_vagas_inscrito,f"num_vagas: [{num_vagas}]", "->",vagas_nao_ocupadas[grupo_vagas_inscrito])
                 
                 if linhas_filtradas.shape[0] > 0:
                     # Atribui valores às colunas `Grupo_vagas_inicial_` e `Grupo_vagas_chamado_`
@@ -112,10 +137,10 @@ if uploaded_file is not None:
                 
                 """
 
-                # global vagas_ocupadas, regras_remanejamento, filtros
+                # global vagas_nao_ocupadas, regras_remanejamento, filtros
 
-                for cota in vagas_ocupadas:
-                    n_vagas_restantes = vagas_ocupadas.get(cota, 0)
+                for cota in vagas_nao_ocupadas:
+                    n_vagas_restantes = vagas_nao_ocupadas.get(cota, 0)
                     if n_vagas_restantes > 0:
                         for proxima_cota in regras_remanejamento.get(cota, []):
                             cotas_no_filtro = filtros.get(proxima_cota, [])
@@ -131,17 +156,15 @@ if uploaded_file is not None:
                                 df_filter.loc[linhas_filtradas.index, "Grupo_vagas_chamado_"] = proxima_cota.replace("_","-")
                                 df_filter.loc[linhas_filtradas.index, "Log"] = "Vaga remanejada"
                 
-                                vagas_ocupadas[cota] = n_vagas_restantes - linhas_filtradas.shape[0]
-                                print(" |=>> ",vagas_ocupadas[cota])
+                                vagas_nao_ocupadas[cota] = n_vagas_restantes - linhas_filtradas.shape[0]
+                                print(" |=>> ",vagas_nao_ocupadas[cota])
                 
-                            if vagas_ocupadas[cota] <= 0: 
+                            if vagas_nao_ocupadas[cota] <= 0: 
                                 print(f"Encerrou a ocupação da vaga para a cota {cota}")
                                 break
 
             
-            
             # df_filter = df[(df["Curso"] == curso_selecionado) & (df["Situação Geral"].isin(filter_situacao_geral)) ][cols_all]
-
             df_filter = df[(df["Curso"] == curso_selecionado) & (df["Situação Geral"].isin(filter_situacao_geral)) ]
 
             ocupar_vagas(df_filter)
@@ -151,14 +174,20 @@ if uploaded_file is not None:
             df_filter["Confere_1"] = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
             df_filter["Confere_2"] = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
 
-            # # Aplicar estilo ao DataFrame
-            # styled_df = df_resultado.style.apply(highlight_differences, subset=["Grupo de vagas inicial", "Grupo_vagas_inicial_", 
-            #                                                                 "Grupo de vagas chamado", "Grupo_vagas_chamado_"])
 
-            st.dataframe(df_filter)
+            # styled_df = df_filter.style.applymap(highlight_grades, subset=['Total'])
+            # styled_df = df_filter.style.apply(highlight_mismatch, axis=1)
+            styled_df = df_filter.style.apply(highlight_cota, axis=1)
+
+            st.dataframe(styled_df)
+
+            campus_ = campus[0].replace(" ", "_")
+            curso_selecionado_ = curso_selecionado.replace(" ", "_")
             
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                df_filter.to_excel(writer, index=False, sheet_name="Resultado Final")
+                df_filter.to_excel(writer, index=False, sheet_name="Resultado")
             output.seek(0)
-            st.download_button("Baixar resultado em .xlsx", output, file_name="Resultado_Ocupacao.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+            st.download_button("Baixar resultado em .xlsx", output, file_name=f"Resultado_Ocupacao_{curso_selecionado_}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
