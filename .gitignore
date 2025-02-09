@@ -1,0 +1,12 @@
+
+
+# Ignore everything in this directory
+*.xls*
+
+
+# Ingoring notebooks
+.ipynb_checkpoints
+*.ipynb
+*.html
+
+
