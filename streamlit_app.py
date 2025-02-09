@@ -1,12 +1,14 @@
 import streamlit as st
 import pandas as pd
 import io
-from config import ordem_form, fluxo, filtros, regras_remanejamento
+from config import ordem_form, fluxo, filtros, regras_remanejamento, filter_situacao_geral
 
 st.set_page_config(page_title="Ocupação de Vagas - IFMG", page_icon="🎯", layout="wide")
 
 vagas = {}
 vagas_ocupadas = {}
+valores = []
+
 
 # Interface do Streamlit
 st.title("🎯 Ocupação de Vagas - IFMG 🏛️")
@@ -21,20 +23,39 @@ if uploaded_file is not None:
 
 
 
-
     
     cursos_disponiveis = df["Curso"].unique().tolist()
     curso_selecionado = st.selectbox("Selecione o curso", cursos_disponiveis)
     
     if curso_selecionado:
         st.subheader(f"Vagas para {curso_selecionado}")
+
+        st.info("""📝O arquivo deve conter 9 números separados por espaço ou virgula.
+                  Devem ser informadas as vagas para cotas na ordem dos campos do formulário abaixo.
+                  Exemplo: 10 5 5 5 5 5 5 5 5.""")
+        # Opção de upload de arquivo
+        uploaded_file = st.file_uploader("""Envie um arquivo '.txt' contendo as vagas ou informe 
+                                         direto nos campos do formulario.
+                                         """, type=["txt"])
+        
+
+        if uploaded_file is not None:
+            content = uploaded_file.read().decode("utf-8").strip()
+            content = content.replace(",", " ")  # Substituir vírgulas por espaços se necessário
+            valores = list(map(int, content.split()))  # Separar por espaço e converter para int
+            
+            if len(valores) == len(ordem_form):
+                for idx, cota in enumerate(ordem_form):
+                    vagas[cota[0]] = valores[idx]
+            else:
+                st.error("O arquivo não contém a quantidade correta de valores. Insira exatamente 9 números.")        
                 
         with st.form("form_vagas"):
             cols = st.columns(len(ordem_form))
             for idx, cota in enumerate(ordem_form):
                 with cols[idx]:
                     label = f"{cota[1]} {cota[0]}"
-                    vagas[cota[0]] = int(st.number_input(label, min_value=0, value=0))
+                    vagas[cota[0]] = int(st.number_input(label, min_value=0, value=valores[idx] if len(valores)>0 else 0))
 
             submitted = st.form_submit_button("Processar Ocupação")
         vagas_ocupadas = vagas.copy()
@@ -42,23 +63,33 @@ if uploaded_file is not None:
         if submitted:
     
             def ocupar_vagas(df_filter):
-                primeira_ocupacao_todas(df_filter)
+                ocupacao_inicial_todas(df_filter)
                 remanejar_vagas(df_filter)
                 
 
-            def primeira_ocupacao_todas(df_filter):
-                global fluxo
+            def ocupacao_inicial_todas(df_filter):
+                """
+                    Ocupa as vagas iniciais de acordo com o fluxo de ocupação.
+                    Caso não haja vagas suficientes, a cota será preenchida parcialmente.
+                
+                """
+                # global fluxo
 
                 for cota in fluxo:
                     # sort_order = [False] * (len(cols_sorted) - 1) + [True]
                     # df_filter.sort_values(by=cols_sorted, ascending=sort_order,  inplace=True)
-                    primeira_ocupacao(cota, df_filter)
+                    ocupacao_inicial(cota, df_filter)
 
             
-            def primeira_ocupacao(grupo_vagas_inscrito, df_filter): 
+            def ocupacao_inicial(grupo_vagas_inscrito, df_filter): 
+                """
+                    Ocupa as vagas iniciais para uma cota específica.
+                    Caso não haja vagas suficientes, a cota será preenchida parcialmente.
+                
+                """
                 # global vagas, filtros, vagas_ocupadas
 
-                num_vagas = vagas[grupo_vagas_inscrito]
+                num_vagas = vagas.get(grupo_vagas_inscrito, 0)
                 cotas_no_filtro = filtros[grupo_vagas_inscrito]
                 linhas_filtradas = df_filter[(df_filter["Grupo de vagas inscrito"].isin(cotas_no_filtro)) &\
                                             (df_filter["Grupo_vagas_chamado_"] == "")]\
@@ -75,14 +106,20 @@ if uploaded_file is not None:
             
 
             def remanejar_vagas(df_filter):
+                """
+                    Remaneja vagas não preenchidas para outras cotas de acordo com as regras de remanejamento
+                    caso existam vagas não preenchidas.
+                
+                """
+
                 # global vagas_ocupadas, regras_remanejamento, filtros
 
                 for cota in vagas_ocupadas:
-                    n_vagas_restantes = vagas_ocupadas[cota]
+                    n_vagas_restantes = vagas_ocupadas.get(cota, 0)
                     if n_vagas_restantes > 0:
-                        for proxima_cota in regras_remanejamento[cota]:
-                            cotas_no_filtro = filtros[ proxima_cota ]
-                            print(cota," => ", proxima_cota,": ", cotas_no_filtro, end='>>' )
+                        for proxima_cota in regras_remanejamento.get(cota, []):
+                            cotas_no_filtro = filtros.get(proxima_cota, [])
+                            # print(cota," => ", proxima_cota,": ", cotas_no_filtro, end='>>' )
                 
                             linhas_filtradas = df_filter[(df_filter["Grupo de vagas inscrito"].isin(cotas_no_filtro)) &\
                                                                 (df_filter["Grupo_vagas_chamado_"] == "")]\
@@ -102,7 +139,7 @@ if uploaded_file is not None:
                                 break
 
             
-            filter_situacao_geral = ["Classificado(a)", "Excedente" ]
+            
             # df_filter = df[(df["Curso"] == curso_selecionado) & (df["Situação Geral"].isin(filter_situacao_geral)) ][cols_all]
 
             df_filter = df[(df["Curso"] == curso_selecionado) & (df["Situação Geral"].isin(filter_situacao_geral)) ]
@@ -124,4 +161,4 @@ if uploaded_file is not None:
             with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
                 df_filter.to_excel(writer, index=False, sheet_name="Resultado Final")
             output.seek(0)
-            st.download_button("Baixar resultado em .xlsx", output, file_name="resultado_ocupacao.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            st.download_button("Baixar resultado em .xlsx", output, file_name="Resultado_Ocupacao.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

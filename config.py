@@ -1,11 +1,13 @@
 
+filter_situacao_geral = ["Classificado(a)", "Excedente" ]
+
 # 12.4 Havendo empate na nota final de candidatos, será levada em conta a seguinte ordem
-# de critérios para o desempate:
-# a) Maior nota na área de Linguagens, Códigos e suas Tecnologias;
-# b) Maior nota na área de Matemática e suas Tecnologias;
-# c) Maior nota na área de Ciências da Natureza e suas Tecnologias;
-# d) Maior nota na área de Ciências Humanas e suas Tecnologias;
-# e) Maior idade, levando-se em conta dia, mês e ano de nascimento.
+#      de critérios para o desempate:
+#   a) Maior nota na área de Linguagens, Códigos e suas Tecnologias;
+#   b) Maior nota na área de Matemática e suas Tecnologias;
+#   c) Maior nota na área de Ciências da Natureza e suas Tecnologias;
+#   d) Maior nota na área de Ciências Humanas e suas Tecnologias;
+#   e) Maior idade, levando-se em conta dia, mês e ano de nascimento.
 
 cols_sorted = ["Total",
                "Linguagens, Códigos e suas Tecnologias",
@@ -14,7 +16,7 @@ cols_sorted = ["Total",
                "Ciências Humanas e suas Tecnologias",
                "Data de Nascimento"]
 
-
+ascending_cols_sorted = [False, False, False, False, False, True]
 
 other_cols = ["Inscrição",
         "Grupo de vagas inscrito",
@@ -40,7 +42,7 @@ filtros = {
     "LB_PPI": ["LB-PPI"]
 }
 
-# Fluxo de ocupação de vagas
+# Fluxo de ocupação de vagas 
 fluxo = [ "AC","LI_EP","LI_PCD","LI_Q","LI_PPI","LB_EP","LB_PCD","LB_Q","LB_PPI" ]
 
 # Ordem para os inputs de vagas 

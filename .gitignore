@@ -9,4 +9,12 @@
 *.ipynb
 *.html
 
+# Ignore txt files
+*.txt
 
+# Ignore yaml and yml files
+*.yaml
+*.yml
+
+# acepting requirements.txt
+!requirements.txt
