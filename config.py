@@ -12,13 +12,6 @@ color_map = {
 }
 
 
-
-
-
-
-
-
-
 filter_situacao_geral = ["Classificado(a)", "Excedente" ]
 
 # 12.4 Havendo empate na nota final de candidatos, será levada em conta a seguinte ordem
@@ -65,6 +58,8 @@ filtros = {
 # Fluxo de ocupação de vagas 
 fluxo = [ "AC","LI_EP","LI_PCD","LI_Q","LI_PPI","LB_EP","LB_PCD","LB_Q","LB_PPI" ]
 
+fluxo_vagas_nao_ocupadas = [ "LB_PPI", "LB_Q", "LB_PCD", "LB_EP", "LI_PPI", "LI_Q", "LI_PCD", "LI_EP"]
+
 # Ordem para os inputs de vagas 
 ordem_form = [("AC","🌍"), 
               ("LB_PPI","💰✊🏾🪶"), 
@@ -79,17 +74,15 @@ ordem_form = [("AC","🌍"),
 
 # Regras para remanejamento de vagas não preenchidas
 regras_remanejamento = { 
-    "LB_PPI": ["LB_Q", "LB_PCD", "LB_EP", "LI_PPI", "LI_Q", "LI_PCD", "LI_EP", "AC"],
-    "LB_Q":   ["LB_PPI", "LB_PCD", "LB_EP", "LI_PPI", "LI_Q", "LI_PCD", "LI_EP", "AC"],
-    "LB_PCD": ["LB_PPI", "LB_Q", "LB_EP", "LI_PPI", "LI_Q", "LI_PCD", "LI_EP", "AC"],
-    "LB_EP":  ["LB_PPI", "LB_Q", "LB_PCD", "LI_PPI", "LI_Q", "LI_PCD", "LI_EP", "AC"],
-    "LI_PPI": ["LB_PPI", "LB_Q", "LB_PCD", "LB_EP", "LI_Q", "LI_PCD", "LI_EP", "AC"],
-    "LI_Q":   ["LB_PPI", "LB_Q", "LB_PCD", "LB_EP", "LI_PPI", "LI_PCD", "LI_EP", "AC"],
-    "LI_PCD": ["LB_PPI", "LB_Q", "LB_PCD", "LB_EP", "LI_PPI", "LI_Q", "LI_EP", "AC"],
-    "LI_EP":  ["LB_PPI", "LB_Q", "LB_PCD", "LB_EP", "LI_PPI", "LI_Q", "LI_PCD", "AC"],
-    "AC":     []
+    "LB_PPI": ["LB_Q",   "LB_PCD", "LB_EP",  "LI_PPI", "LI_Q",   "LI_PCD", "LI_EP",  "AC"],
+    "LB_Q":   ["LB_PPI", "LB_PCD", "LB_EP",  "LI_PPI", "LI_Q",   "LI_PCD", "LI_EP",  "AC"],
+    "LB_PCD": ["LB_PPI", "LB_Q",   "LB_EP",  "LI_PPI", "LI_Q",   "LI_PCD", "LI_EP",  "AC"],
+    "LB_EP":  ["LB_PPI", "LB_Q",   "LB_PCD", "LI_PPI", "LI_Q",   "LI_PCD", "LI_EP",  "AC"],
+    "LI_PPI": ["LB_PPI", "LB_Q",   "LB_PCD", "LB_EP",  "LI_Q",   "LI_PCD", "LI_EP",  "AC"],
+    "LI_Q":   ["LB_PPI", "LB_Q",   "LB_PCD", "LB_EP",  "LI_PPI", "LI_PCD", "LI_EP",  "AC"],
+    "LI_PCD": ["LB_PPI", "LB_Q",   "LB_PCD", "LB_EP",  "LI_PPI", "LI_Q",   "LI_EP",  "AC"],
+    "LI_EP":  ["LB_PPI", "LB_Q",   "LB_PCD", "LB_EP",  "LI_PPI", "LI_Q",   "LI_PCD", "AC"]
 }
-
 
 # Dicionário de IDs de cotas
 cota_id = {
@@ -103,7 +96,6 @@ cota_id = {
     "LI-PCD": 18,
     "LI-EP": 19
 }
-
 
 # Dicionário de IDs de campus
 campus_id = {
@@ -127,7 +119,6 @@ campus_id = {
   "Reitoria": 18,
   "Ibirité": 19
 }
-
 
 # Dicionário de códigos de cursos por campus
 campus_curso_id = {
@@ -284,7 +275,8 @@ campus_curso_id = {
         "Técnico Integrado em Informática": "PNIINFO",
         "Técnico Subsequente em Administração": "PNSADMI",
         "Técnico Subsequente em Informática": "PNSINFO",
-        "Tecnólogo em Processos Gerenciais": "PNTGER"
+        "Tecnólogo em Processos Gerenciais": "PNTGER",
+        "Processos Gerenciais":  "PNTGER",
     },
     "Ribeirão das Neves": {
         "Bacharelado em Administração": "RIBADMI",

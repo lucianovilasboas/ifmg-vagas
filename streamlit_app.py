@@ -1,7 +1,9 @@
+import re
 import streamlit as st
 import pandas as pd
 import io
 from config import ordem_form, fluxo, filtros, regras_remanejamento, filter_situacao_geral, color_map, campus_id, campus_curso_id, cota_id
+from config import fluxo_vagas_nao_ocupadas, ascending_cols_sorted, cols_sorted
 
 st.set_page_config(page_title="Ocupação de Vagas - IFMG", page_icon="🎯", layout="wide")
 
@@ -28,15 +30,25 @@ uploaded_file = st.file_uploader("Carregar arquivo Excel", type=["xlsx"])
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, sheet_name=0)
+
+    df["CPF do candidato"] = df["CPF do candidato"].astype(str)
+
     df["Grupo_vagas_inicial_"] = ""
     df["Grupo_vagas_chamado_"] = ""
+    df["Classificacao_geral_"] = -1
+    df["Situacao_geral_"]  = ""
+    
     df["Log"] = ""
+    
+    df["Confere_1"] = None
+    df["Confere_1"] = None
 
-
+    # print("df.dtypes:\n", df.dtypes) 
 
     
     cursos_disponiveis = df["Curso"].unique().tolist()
     campus = df["Campus"].unique().tolist()
+    campus = [c.strip() for c in campus if isinstance(c, str) and "Campus" in c]
     curso_selecionado = st.selectbox("Selecione o curso", cursos_disponiveis)
     
     if curso_selecionado:
@@ -105,7 +117,7 @@ if uploaded_file is not None:
                 df_filter = df[df["Grupo_vagas_chamado_"] != ""][cols].copy()
                 campus = df_filter["Campus"].iloc[0].replace("Campus ", "").strip()
 
-                # print("Campus ->"    , f"'{campus}'")
+                print("Campus ->"    , f"'{campus}'")
 
                 df_filter["ID_Campus"] = campus_id.get(campus, 0)
                 df_filter["ID_Curso"] = df_filter["Curso"].apply(lambda c: campus_curso_id.get(campus, {}).get(c.split(" - ")[0], ""))    
@@ -114,13 +126,35 @@ if uploaded_file is not None:
                 df_filter["Grupo_vagas_chamado_"] = df_filter["Grupo_vagas_chamado_"].apply(lambda c: cota_id.get(c, 0))
                 df_filter["Classificação Geral"] = df_filter["Classificação Geral"].apply(lambda i: f"{i};")
 
+                df_filter["CPF do candidato"] = df_filter["CPF do candidato"].apply(aplicar_mascara_cpf)
+
                 order_cols = ["CPF do candidato", "ID_Campus", "ID_Curso", "ID_Edital", "Grupo de vagas inscrito", "Grupo_vagas_chamado_", "Inscrição", "Classificação Geral"]
 
                 return df_filter[order_cols]
 
 
+            def aplicar_mascara_cpf(cpf):
+                """Aplica a máscara de CPF (XXX.XXX.XXX-XX) somente se ainda não estiver formatado."""
+                cpf = str(cpf).strip()
+                # Expressão regular para identificar se a máscara já está aplicada
+                mascara_cpf = re.compile(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$")
+                if mascara_cpf.match(cpf):  # Se já estiver formatado, retorna como está
+                    return cpf
+                cpf = re.sub(r"\D", "", cpf)  # Remove quaisquer caracteres não numéricos
+                if len(cpf) == 10:  # Se tiver 10 dígitos, adiciona um zero à esquerda
+                    cpf = "0" + cpf
+                if len(cpf) == 11:  # Aplica a máscara apenas se tiver 11 dígitos
+                    return f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}"
+                return cpf  # Retorna o original se não for um CPF válido
+
 
             # --- Funções para ocupação de vagas ---
+
+            def total_vagas():
+                """
+                    Retorna o total de vagas disponíveis.
+                """
+                return sum(vagas.values())
 
 
             def ocupar_vagas(df_filter):
@@ -137,37 +171,47 @@ if uploaded_file is not None:
                     Caso não haja vagas suficientes, a cota será preenchida parcialmente.
                 
                 """
-                # global fluxo
 
-                for cota in fluxo:
-                    # sort_order = [False] * (len(cols_sorted) - 1) + [True]
-                    # df_filter.sort_values(by=cols_sorted, ascending=sort_order,  inplace=True)
-                    ocupacao_inicial(cota, df_filter)
+                for grupo_vagas_inicial in fluxo:
+                    # ordenar o dataframe de acordo com as colunas especificadas e critérios de ordenação (desempate)                                      
+                    ocupacao_inicial(grupo_vagas_inicial, df_filter)
 
             
-            def ocupacao_inicial(grupo_vagas_inscrito, df_filter): 
+            def ocupacao_inicial(grupo_vagas_inicial, df_filter): 
                 """
                     Ocupa as vagas iniciais para uma cota específica.
                     Caso não haja vagas suficientes, a cota será preenchida parcialmente.
                 
                 """
-                # global vagas, filtros, vagas_nao_ocupadas
 
-                num_vagas = vagas.get(grupo_vagas_inscrito, 0)
-                cotas_no_filtro = filtros[grupo_vagas_inscrito]
+                if df_filter.shape[0] <= total_vagas() :
+                    df_filter.loc[:, "Grupo_vagas_inicial_"] = "AC"
+                    df_filter.loc[:, "Grupo_vagas_chamado_"] = "AC"
+                    df_filter.loc[df_filter.index, "Classificacao_geral_"] = list(range(1, df_filter.shape[0] + 1))
+                    df_filter.loc[df_filter.index, "Situacao_geral_"] = "Classificado(a)"                    
+                    df_filter.loc[:, "Log"] = "Ocupação inicial"
 
-                linhas_filtradas = df_filter[(df_filter["Grupo de vagas inscrito"].isin(cotas_no_filtro)) &\
-                                            (df_filter["Grupo_vagas_chamado_"] == "")]\
-                                            .head(num_vagas)
-                
-                vagas_nao_ocupadas[grupo_vagas_inscrito] = num_vagas - linhas_filtradas.shape[0]
-                # print(grupo_vagas_inscrito,f"num_vagas: [{num_vagas}]", "->",vagas_nao_ocupadas[grupo_vagas_inscrito])
-                
-                if linhas_filtradas.shape[0] > 0:
-                    # Atribui valores às colunas `Grupo_vagas_inicial_` e `Grupo_vagas_chamado_`
-                    df_filter.loc[linhas_filtradas.index, "Grupo_vagas_inicial_"] = grupo_vagas_inscrito.replace("_","-")
-                    df_filter.loc[linhas_filtradas.index, "Grupo_vagas_chamado_"] = grupo_vagas_inscrito.replace("_","-")
-                    df_filter.loc[linhas_filtradas.index, "Log"] = "Ocupação inicial"
+                else:
+                    # df_filter.sort_values(by=cols_sorted, ascending=ascending_cols_sorted,  inplace=True)
+
+                    num_vagas = vagas.get(grupo_vagas_inicial, 0)
+                    cotas_no_filtro = filtros[grupo_vagas_inicial]
+
+                    linhas_filtradas = df_filter[(df_filter["Grupo de vagas inscrito"].isin(cotas_no_filtro)) &\
+                                                (df_filter["Grupo_vagas_chamado_"] == "")]\
+                                                .head(num_vagas)
+                    
+                    vagas_nao_ocupadas[grupo_vagas_inicial] = num_vagas - linhas_filtradas.shape[0]
+                    
+                    print(grupo_vagas_inicial,f"num_vagas: {num_vagas}", "->"," vagas_nao_ocupadas ",vagas_nao_ocupadas[grupo_vagas_inicial])
+                    
+                    if linhas_filtradas.shape[0] > 0:
+                        # Atribui valores às colunas `Grupo_vagas_inicial_` e `Grupo_vagas_chamado_`
+                        df_filter.loc[linhas_filtradas.index, "Grupo_vagas_inicial_"] = grupo_vagas_inicial.replace("_","-")
+                        df_filter.loc[linhas_filtradas.index, "Grupo_vagas_chamado_"] = grupo_vagas_inicial.replace("_","-")
+                        df_filter.loc[linhas_filtradas.index, "Log"] = "Ocupação inicial"
+                        df_filter.loc[linhas_filtradas.index, "Classificacao_geral_"] = list(range(1, linhas_filtradas.shape[0] + 1))
+                        df_filter.loc[linhas_filtradas.index, "Situacao_geral_"] = "Classificado(a)"
             
 
             def remanejar_vagas(df_filter):
@@ -176,31 +220,34 @@ if uploaded_file is not None:
                     caso existam vagas não preenchidas.
                 
                 """
-
-                # global vagas_nao_ocupadas, regras_remanejamento, filtros
-
-                for cota in vagas_nao_ocupadas:
+                for cota in fluxo_vagas_nao_ocupadas:
                     n_vagas_restantes = vagas_nao_ocupadas.get(cota, 0)
+                    print(f" :: Vagas não ocupadas para a cota {cota}: {n_vagas_restantes}")
                     if n_vagas_restantes > 0:
                         for proxima_cota in regras_remanejamento.get(cota, []):
                             cotas_no_filtro = filtros.get(proxima_cota, [])
-                            # print(cota," => ", proxima_cota,": ", cotas_no_filtro, end='>>' )
+                            
                 
                             linhas_filtradas = df_filter[(df_filter["Grupo de vagas inscrito"].isin(cotas_no_filtro)) &\
                                                                 (df_filter["Grupo_vagas_chamado_"] == "")]\
                                                                 .head(n_vagas_restantes)
+                            
+                            print("proxima_cota => ", proxima_cota,": filtro: ", cotas_no_filtro,'ENCONTROU:',linhas_filtradas.shape[0])
                             
                             if linhas_filtradas.shape[0] > 0:
                                 # Atribui valores às colunas `Grupo_vagas_inicial_` e `Grupo_vagas_chamado_`
                                 df_filter.loc[linhas_filtradas.index, "Grupo_vagas_inicial_"] = cota.replace("_","-")
                                 df_filter.loc[linhas_filtradas.index, "Grupo_vagas_chamado_"] = proxima_cota.replace("_","-")
                                 df_filter.loc[linhas_filtradas.index, "Log"] = "Vaga remanejada"
+                                df_filter.loc[linhas_filtradas.index, "Classificacao_geral_"] = list(range(1, linhas_filtradas.shape[0] + 1))
+                                df_filter.loc[linhas_filtradas.index, "Situacao_geral_"] = "Classificado(a)"
                 
                                 vagas_nao_ocupadas[cota] = n_vagas_restantes - linhas_filtradas.shape[0]
-                                # print(" |=>> ",vagas_nao_ocupadas[cota])
+                                
+                                print(" |=>> ",vagas_nao_ocupadas[cota])
                 
                             if vagas_nao_ocupadas[cota] <= 0: 
-                                print(f"Encerrou a ocupação da vaga para a cota {cota}")
+                                print(f"Encerrou a ocupação da vaga para a cota: {cota} => {proxima_cota}\n\n")
                                 break
 
             
@@ -209,13 +256,16 @@ if uploaded_file is not None:
             # iniciar a ocupação de vagas
             # Selecionar as colunas necessárias para a ocupação
 
-            # df_filter = df[(df["Curso"] == curso_selecionado) & (df["Situação Geral"].isin(filter_situacao_geral)) ][cols_all]
             df_filter = df[(df["Curso"] == curso_selecionado) & (df["Situação Geral"].isin(filter_situacao_geral)) ]
 
             ocupar_vagas(df_filter)
             
 
             st.subheader("Resultado da Ocupação")
+
+            df_filter.loc[:, "Confere_1"]  = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
+            df_filter.loc[:, "Confere_2"]  = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
+
             # df_filter["Confere_1"] = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
             # df_filter["Confere_2"] = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
 
@@ -225,7 +275,9 @@ if uploaded_file is not None:
 
             st.dataframe(styled_df)
 
-            campus_ = campus[0].replace(" ", "_")
+            print("campus:", campus)
+
+            campus_ = str(campus[0]).replace(" ", "_")
             curso_selecionado_ = curso_selecionado.replace(" ", "_")
             
             output_xlsx = io.BytesIO()
