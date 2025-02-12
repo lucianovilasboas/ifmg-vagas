@@ -1,15 +1,3 @@
-# Dicionário de cores para cada tipo de cota
-color_map = {
-    "AC": "#D4E157",  # Verde claro
-    "LI-PPI": "#FF7043",  # Laranja
-    "LI-Q": "#FFCC80",  # Amarelo claro
-    "LI-PCD": "#B3E5FC",  # Azul claro
-    "LI-EP": "#80CBC4",  # Verde água
-    "LB-PPI": "#F06292",  # Rosa
-    "LB-Q": "#FFD54F",  # Amarelo mais forte
-    "LB-PCD": "#81D4FA",  # Azul médio
-    "LB-EP": "#A1887F",  # Marrom claro
-}
 
 
 filter_situacao_geral = ["Classificado(a)", "Excedente" ]
