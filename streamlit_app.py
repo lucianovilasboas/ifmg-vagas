@@ -27,8 +27,8 @@ st.title("🎯 Ocupação de Vagas - IFMG 🏛️")
 st.error(""" #### 📂🚨 ATENÇÃO:
 - **Este é um aplicativo experimental** para auxiliar na ocupação de vagas. Favor sempre conferir os resultados antes de utilizá-los;
 - **Ao formato do arquivo (📈 Excel) de entrada**. O 📈 arquivo precisa estar 🔢 ordenado por nota final (Total ou Média) de forma descendente e seguindo os critérios de desempate;
-- Para realizar as próxmimas chamadas, atualize o arquivo de entrada removendo os classificados da chamada anterior e conferindo a ordenação conforme os critérios do Edital. 
-- Lembre-se de que se alguma matrícula for indeferida por não comprovação de cota, o candidato deve voltar para planilha com sua opção de vaga alterada para AC e deve-se aplicar a ordenação das notas conforme os critéiros do Edtial.
+- **À realização das próxmimas chamadas**. Atualize o arquivo de entrada removendo os classificados da chamada anterior (deixe apenas os excedentes) e conferindo a ordenação conforme os critérios do Edital. 
+- **Lembre-se de que se alguma matrícula for indeferida por não comprovação de cota**, o candidato deve voltar para planilha com sua opção de vaga alterada para AC e deve-se aplicar a ordenação das notas conforme os critéiros do Edital.
 """
 )
 
