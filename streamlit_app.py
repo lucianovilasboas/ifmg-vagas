@@ -28,7 +28,7 @@ st.error(""" #### 📂🚨 ATENÇÃO:
 - **Este é um aplicativo experimental** para auxiliar na ocupação de vagas. Favor sempre conferir os resultados antes de utilizá-los;
 - **Ao formato do arquivo (📈 Excel) de entrada**. O 📈 arquivo precisa estar 🔢 ordenado por nota final (Total ou Média) de forma descendente e seguindo os critérios de desempate;
 - **À realização das próxmimas chamadas**. Atualize o arquivo de entrada removendo os classificados da chamada anterior (deixe apenas os excedentes) e conferindo a ordenação conforme os critérios do Edital. 
-- **Lembre-se de que se alguma matrícula for indeferida por não comprovação de cota**, o candidato deve voltar para planilha com sua opção de vaga alterada para AC e deve-se aplicar a ordenação das notas conforme os critéiros do Edital.
+- **Lembre-se de que se alguma matrícula for indeferida por não comprovação de cota**, o candidato deve voltar para planilha com sua opção de vaga alterada para **AC** e deve-se aplicar a ordenação das notas conforme os critéiros do Edital.
 """
 )
 
@@ -215,14 +215,9 @@ if uploaded_file is not None:
 
             st.subheader("Resultado da Ocupação")
 
-            df_filter.loc[:, "Confere_1"]  = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
-            df_filter.loc[:, "Confere_2"]  = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
+            # df_filter.loc[:, "Confere_1"]  = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
+            # df_filter.loc[:, "Confere_2"]  = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
 
-            # df_filter["Confere_1"] = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
-            # df_filter["Confere_2"] = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
-
-            # styled_df = df_filter.style.applymap(highlight_grades, subset=['Total'])
-            # styled_df = df_filter.style.apply(highlight_mismatch, axis=1)
             styled_df = df_filter.style.apply(highlight_cota, axis=1)
 
             st.dataframe(styled_df)
