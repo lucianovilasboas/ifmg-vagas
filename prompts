@@ -1,0 +1,21 @@
+Leia os arquivo streamlit_app.py e config.py e compreenda o algoritmos de ocupaçao de vagas.
+Crie um script em python (argparse) que receba como argumento o nome de um arquivo .xlsx e 
+o nome de um arquivo .txt com as cotas e vagas disponíveis. 
+O script deve realizar a leitura dos arquivos e aplicar para cada curso as regras de ocupação de vagas 
+gerando um novo arquivo .xlsx de saída colocando nas colunas Grupo_vagas_inicial_ e Grupo_vagas_chamado_ 
+as cotas que foram ocupadas. 
+
+
+Considere ainda:
+ - O arquivo de saída deve ser salvo com o nome do arquivo de entrada acrescido do sufixo "_ocupado".
+ - cada curso no arquivo de saida deve ser salvo em uma aba separada.
+ - O arquivo de saída deve conter as colunas originais do arquivo de entrada acrescido das colunas Grupo_vagas_inicial_ e Grupo_vagas_chamado_.
+ - 
+
+
+
+Exemplo de uso:
+
+```bash 
+python ocupar.py -i arquivo.xlsx -c cotas.txt
+```

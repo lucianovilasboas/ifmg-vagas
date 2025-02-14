@@ -18,3 +18,8 @@
 
 # acepting requirements.txt
 !requirements.txt
+
+
+
+# Ignore paychache files
+__pycache__/*.pyc

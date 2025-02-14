@@ -36,6 +36,11 @@ def highlight_cota(row):
     return [f'background-color: {color}; color: black;'] * len(row)
 
 
+def to_text(text):
+    """
+    Transforma a lista de tuplas em texto.
+    """ 
+    return ", ".join([f"{n} vagas {cota}" for cota, n in text])
 
 
 def aplicar_mascara_cpf(cpf):
@@ -52,6 +57,23 @@ def aplicar_mascara_cpf(cpf):
         return f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}"
     return cpf  # Retorna o original se não for um CPF válido
 
+
+def tratar_nome_curso(campus, curso):
+
+    # Técnico Integrado em Automação Industrial - Campus Betim - Turnos Manhã e Tarde
+
+    # Processos Gerenciais - Tecnológico - Campus Ponte Nova - Turno Noturno - Notas do Enem
+    # Administração - Bacharelado - Campus Sabará - Turno Noturno - Notas do Enem
+
+    curso_split = curso.split(" - ")
+    if len(curso_split) == 3:
+        curso_ = curso_split[0]
+    elif len(curso_split) == 5:
+        curso_ = f"{curso_split[1]} em {curso_split[0]}"
+    else:
+        curso_ = curso
+
+    return campus_curso_id.get(campus, {}).get(curso_, "")
 
 
 def gerar_carga_de_dados(df: pd.DataFrame):
@@ -71,7 +93,7 @@ def gerar_carga_de_dados(df: pd.DataFrame):
     # print("Campus ->"    , f"'{campus}'")
 
     df_filter["ID_Campus"] = campus_id.get(campus, 0)
-    df_filter["ID_Curso"] = df_filter["Curso"].apply(lambda c: campus_curso_id.get(campus, {}).get(c.split(" - ")[0], ""))    
+    df_filter["ID_Curso"] = df_filter["Curso"].apply(lambda curso: tratar_nome_curso(campus, curso))    
     df_filter["ID_Edital"] = "<preenchido pelo campus>"
     df_filter["Grupo de vagas inscrito"] = df_filter["Grupo de vagas inscrito"].apply(lambda c: cota_id.get(c, 0))
     df_filter["Grupo_vagas_chamado_"] = df_filter["Grupo_vagas_chamado_"].apply(lambda c: cota_id.get(c, 0))
@@ -89,6 +111,25 @@ def total_vagas(vagas):
         Retorna o total de vagas disponíveis.
     """
     return sum(vagas.values())
+
+
+def zerar_vagas(vagas):
+    """
+        Zera o total de vagas disponíveis.
+    """
+    for cota in vagas: vagas[cota] = 0
+
+
+def inicializa_dataframe(df):
+    df["Grupo_vagas_inicial_"] = ""
+    df["Grupo_vagas_chamado_"] = ""
+    df["Classificacao_geral_"] = 0
+    df["Situacao_geral_"]  = ""
+    df["Log"] = ""
+    df["Confere_1"] = None
+    df["Confere_2"] = None
+
+
 
 
 # Carregar dados do YAML se existir

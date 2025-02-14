@@ -3,7 +3,7 @@ import pandas as pd
 import io
 from config import ordem_form, fluxo, filtros, regras_remanejamento, filter_situacao_geral
 from config import fluxo_vagas_nao_ocupadas
-from util import aplicar_mascara_cpf, gerar_carga_de_dados, highlight_cota, total_vagas
+from util import gerar_carga_de_dados, highlight_cota, to_text, total_vagas, inicializa_dataframe, zerar_vagas
 
 st.set_page_config(page_title="Ocupação de Vagas - IFMG", page_icon="🎯", layout="wide")
 
@@ -24,23 +24,23 @@ valores = []
 # Interface do Streamlit
 st.title("🎯 Ocupação de Vagas - IFMG 🏛️")
 
+st.error(""" #### 📂🚨 ATENÇÃO:
+- **Este é um aplicativo experimental** para auxiliar na ocupação de vagas. Favor sempre conferir os resultados antes de utilizá-los;
+- **Ao formato do arquivo (📈 Excel) de entrada**. O 📈 arquivo precisa estar 🔢 ordenado por nota final (Total ou Média) de forma descendente e seguindo os critérios de desempate;
+- Para realizar as próxmimas chamadas, atualize o arquivo de entrada removendo os classificados da chamada anterior e conferindo a ordenação conforme os critérios do Edital. 
+- Lembre-se de que se alguma matrícula for indeferida por não comprovação de cota, o candidato deve voltar para planilha com sua opção de vaga alterada para AC e deve-se aplicar a ordenação das notas conforme os critéiros do Edtial.
+"""
+)
+
+st.info("""
+💬 **Qualquer dúvida, sugestão ou elogio**, entre em contato com o 👨‍🏫 **Prof. Luciano** pelo 📧 e-mail: 📨 luciano.espiridiao@ifmg.edu.br""")
+
 uploaded_file = st.file_uploader("Carregar arquivo Excel", type=["xlsx"])
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file, sheet_name=0)
 
-    # df["CPF do candidato"] = df["CPF do candidato"].astype(str)
-    # df["Data de Nascimento"] = pd.to_datetime(df["Data de Nascimento"], errors="coerce")
-
-    df["Grupo_vagas_inicial_"] = ""
-    df["Grupo_vagas_chamado_"] = ""
-    df["Classificacao_geral_"] = -1
-    df["Situacao_geral_"]  = ""
-    
-    df["Log"] = ""
-    
-    df["Confere_1"] = None
-    df["Confere_1"] = None
+    inicializa_dataframe(df)
 
     # print("df.dtypes:\n", df.dtypes) 
 
@@ -93,8 +93,15 @@ if uploaded_file is not None:
                 """ 
                     Função principal para ocupação de vagas. 
                 """
+                print("Iniciando processo de ocupação de vagas...")
                 ocupacao_inicial_todas(df_filter)
-                remanejar_vagas(df_filter)
+                
+                print("---------------------\n")
+                print("Processamento de remanejamento de vagas...")
+                if total_vagas(vagas_nao_ocupadas) > 0:
+                    remanejar_vagas(df_filter)
+                
+                print("Processamento de ocupação de vagas encerrado.\n")
                 
 
             def ocupacao_inicial_todas(df_filter):
@@ -102,17 +109,17 @@ if uploaded_file is not None:
                     Ocupa as vagas iniciais de acordo com o fluxo de ocupação.
                     Caso não haja vagas suficientes, a cota será preenchida parcialmente.
                 """
-                if df_filter.shape[0] <= total_vagas(vagas) :
+                if df_filter.shape[0] <= total_vagas(vagas) : 
+                    # se o número de inscritos for menor ou igual ao total de vagas 
+                    # ocupar todas as vagas iniciais na cota AC
                     df_filter.loc[df_filter.index, "Grupo_vagas_inicial_"] = "AC"
                     df_filter.loc[df_filter.index, "Grupo_vagas_chamado_"] = "AC"
                     df_filter.loc[df_filter.index, "Classificacao_geral_"] = list(range(1, df_filter.shape[0] + 1))
                     df_filter.loc[df_filter.index, "Situacao_geral_"] = "Classificado(a)"                    
                     df_filter.loc[df_filter.index, "Log"] = "Ocupação inicial"
 
+                    zerar_vagas(vagas_nao_ocupadas)
                     vagas_nao_ocupadas["AC"] = total_vagas(vagas) - df_filter.shape[0]
-                    for cota in vagas:
-                        if cota != "AC":
-                            vagas_nao_ocupadas[cota] = 0
 
                 else:
                     for grupo_vagas_inicial in fluxo:
@@ -138,7 +145,8 @@ if uploaded_file is not None:
                 n_linhas_selecionadas = linhas_filtradas.shape[0]
 
                 vagas_nao_ocupadas[grupo_vagas_inicial] = num_vagas - n_linhas_selecionadas
-                print(grupo_vagas_inicial,f"num_vagas: {num_vagas}", "->"," vagas_nao_ocupadas ",vagas_nao_ocupadas[grupo_vagas_inicial])
+
+                print(f"{grupo_vagas_inicial}: {num_vagas} => {vagas_nao_ocupadas[grupo_vagas_inicial]} não ocupadas.") 
                 
                 if n_linhas_selecionadas > 0:
                     # Atribui valores às colunas `Grupo_vagas_inicial_` e `Grupo_vagas_chamado_`
@@ -157,7 +165,7 @@ if uploaded_file is not None:
                 """
                 for cota in fluxo_vagas_nao_ocupadas: # segue o fluxo de vagas não ocupadas
                     text = []
-                    print(f"Processando vagas não ocupadas para a cota {cota}")
+                    if vagas_nao_ocupadas[cota] > 0: print(f"{vagas_nao_ocupadas[cota]} vagas {cota} não ocupadas:")
                     # if n_vagas_restantes > 0: # se houver vagas não ocupadas
                     for proxima_cota in regras_remanejamento.get(cota, []): # segue as regras de remanejamento
                         n_vagas_restantes = vagas_nao_ocupadas.get(cota, 0) # para cada cota, verifica se há vagas não ocupadas
@@ -182,11 +190,9 @@ if uploaded_file is not None:
                                 text += [(proxima_cota, n_linhas_selecionadas)]
                 
                             vagas_nao_ocupadas[cota] = n_vagas_restantes - n_linhas_selecionadas
-                            # print("proxima_cota => ", proxima_cota,": filtro: ", cotas_no_filtro,'ENCONTROU:',linhas_filtradas.shape[0])
-                            
                                 
                             if vagas_nao_ocupadas[cota] <= 0: 
-                                print(f" |=>> Encerrou. A cota {cota} => {text}.\n")
+                                print(f"... foram transformadas em {to_text(text)}.\n")
                                 break
 
 
@@ -281,3 +287,10 @@ if uploaded_file is not None:
             # st.download_button("Baixar resultado em .xlsx", output, file_name=f"Resultado_Ocupacao_{curso_selecionado_}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             # st.download_button("Baixar Carga de Dados para Matrícula", f"Carga_{curso_selecionado_}.csv", "Carga de Dados", "csv")
 
+
+st.markdown("""
+---
+📧 **E-mail:** [luciano.espiridiao@ifmg.edu.br](luciano.espiridiao:seuemail@ifmg.edu.br)  
+🔗 **LinkedIn:** [linkedin.com/in/luciano-espiridiao](https://www.linkedin.com/in/luciano-espiridiao/)  
+📸 **Instagram:** [instagram.com/luciano.ifmg](https://instagram.com/luciano.ifmg)  
+""")
