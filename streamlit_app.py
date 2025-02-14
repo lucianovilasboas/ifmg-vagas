@@ -33,7 +33,7 @@ st.error(""" #### 📂🚨 ATENÇÃO:
 )
 
 st.info("""
-💬 **Qualquer dúvida, sugestão ou elogio**, entre em contato com o 👨‍🏫 **Prof. Luciano** pelo 📧 e-mail: 📨 luciano.espiridiao@ifmg.edu.br""")
+💬 **Qualquer dúvida, sugestão ou algum problema**, reportar para o 👨‍🏫 **Prof. Luciano** pelo 📧 e-mail: 📨 luciano.espiridiao@ifmg.edu.br""")
 
 uploaded_file = st.file_uploader("Carregar arquivo Excel", type=["xlsx"])
 
