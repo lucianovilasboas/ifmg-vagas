@@ -103,8 +103,6 @@ if uploaded_file is not None:
                 if total_vagas(vagas_nao_ocupadas) > 0:
                     remanejar_vagas(df_filter)
                 
-                df_filter["Classificacao_geral_"] = df_filter["Classificacao_geral_"].apply(lambda i: "" if i == 0 else i)
-
                 print("Processamento de ocupação de vagas encerrado.\n")
                 
 
