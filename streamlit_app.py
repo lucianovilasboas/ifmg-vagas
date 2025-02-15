@@ -29,6 +29,8 @@ st.error(""" #### 📂🚨 ATENÇÃO:
 - **Ao formato do arquivo (📈 Excel) de entrada**. O 📈 arquivo precisa estar 🔢 ordenado por nota final (Total ou Média) de forma descendente e seguindo os critérios de desempate;
 - **À realização das próxmimas chamadas**. Atualize o arquivo de entrada removendo os classificados da chamada anterior (deixe apenas os excedentes) e conferindo a ordenação conforme os critérios do Edital. 
 - **Lembre-se de que se alguma matrícula for indeferida por não comprovação de cota**, o candidato deve voltar para planilha com sua opção de vaga alterada para **AC** e deve-se aplicar a ordenação das notas conforme os critéiros do Edital.
+___
+- Após a classificação o resultado será exibido nas colunas: **Grupo_vagas_inicial_**, **Grupo_vagas_chamado_**, **Classificacao_geral_** e **Situacao_geral_**. A coluna **Info** exibirá a ação realizada para cada candidato.
 """
 )
 
@@ -116,7 +118,7 @@ if uploaded_file is not None:
                     df_filter.loc[df_filter.index, "Grupo_vagas_chamado_"] = "AC"
                     df_filter.loc[df_filter.index, "Classificacao_geral_"] = list(range(1, df_filter.shape[0] + 1))
                     df_filter.loc[df_filter.index, "Situacao_geral_"] = "Classificado(a)"                    
-                    df_filter.loc[df_filter.index, "Log"] = "Ocupação inicial"
+                    df_filter.loc[df_filter.index, "Info"] = "Ocupação inicial"
 
                     zerar_vagas(vagas_nao_ocupadas)
                     vagas_nao_ocupadas["AC"] = total_vagas(vagas) - df_filter.shape[0]
@@ -152,7 +154,7 @@ if uploaded_file is not None:
                     # Atribui valores às colunas `Grupo_vagas_inicial_` e `Grupo_vagas_chamado_`
                     df_filter.loc[linhas_filtradas.index, "Grupo_vagas_inicial_"] = grupo_vagas_inicial.replace("_","-")
                     df_filter.loc[linhas_filtradas.index, "Grupo_vagas_chamado_"] = grupo_vagas_inicial.replace("_","-")
-                    df_filter.loc[linhas_filtradas.index, "Log"] = "Ocupação inicial"
+                    df_filter.loc[linhas_filtradas.index, "Info"] = "Ocupação inicial"
                     df_filter.loc[linhas_filtradas.index, "Classificacao_geral_"] = list(range(1, n_linhas_selecionadas + 1))
                     df_filter.loc[linhas_filtradas.index, "Situacao_geral_"] = "Classificado(a)"
 
@@ -183,7 +185,7 @@ if uploaded_file is not None:
                             if n_linhas_selecionadas > 0:
                                 df_filter.loc[linhas_filtradas.index, "Grupo_vagas_inicial_"] = cota.replace("_","-")
                                 df_filter.loc[linhas_filtradas.index, "Grupo_vagas_chamado_"] = proxima_cota.replace("_","-")
-                                df_filter.loc[linhas_filtradas.index, "Log"] = "Vaga remanejada"
+                                df_filter.loc[linhas_filtradas.index, "Info"] = "Vaga remanejada"
                                 df_filter.loc[linhas_filtradas.index, "Classificacao_geral_"] = list(range(1, n_linhas_selecionadas + 1))
                                 df_filter.loc[linhas_filtradas.index, "Situacao_geral_"] = "Classificado(a)"
 
@@ -212,51 +214,53 @@ if uploaded_file is not None:
 
             ocupar_vagas(df_filter)
             
-
             st.subheader("Resultado da Ocupação")
+            if not df_filter.empty:
 
-            # df_filter.loc[:, "Confere_1"]  = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
-            # df_filter.loc[:, "Confere_2"]  = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
+                # df_filter.loc[:, "Confere_1"]  = df_filter["Grupo de vagas inicial"] ==  df_filter["Grupo_vagas_inicial_"]
+                # df_filter.loc[:, "Confere_2"]  = df_filter["Grupo de vagas chamado"] ==  df_filter["Grupo_vagas_chamado_"] 
 
-            styled_df = df_filter.style.apply(highlight_cota, axis=1)
+                styled_df = df_filter.style.apply(highlight_cota, axis=1)
 
-            st.dataframe(styled_df)
+                st.dataframe(styled_df)
 
-            # print("campus:", campus)
+                # print("campus:", campus)
 
-            campus_ = str(campus[0]).replace(" ", "_")
-            curso_selecionado_ = curso_selecionado.replace(" ", "_")
-            
-            output_xlsx = io.BytesIO()
-            with pd.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
-                df_filter.to_excel(writer, index=False, sheet_name="Resultado")
-            output_xlsx.seek(0)
+                campus_ = str(campus[0]).replace(" ", "_")
+                # curso_selecionado_ = curso_selecionado.replace(" ", "_")
+                
+                output_xlsx = io.BytesIO()
+                with pd.ExcelWriter(output_xlsx, engine="xlsxwriter") as writer:
+                    df_filter.to_excel(writer, index=False, sheet_name="Resultado")
+                output_xlsx.seek(0)
 
+                # Armazena os arquivos no session_state para evitar que sejam recriados a cada reload
+                st.session_state["output_xlsx"] = output_xlsx
+
+                if total_vagas(vagas_nao_ocupadas) > 0:
+                    st.warning(f"Ainda *existem {total_vagas(vagas_nao_ocupadas)}* vagas não ocupadas. Verifique o resultado da ocupação")
+                else:
+                    st.success("Todas as vagas foram ocupadas com sucesso!")                
 
 
             st.subheader("Carga de Dados para Matrícula")
-            df_carga = gerar_carga_de_dados(df_filter)
-            st.dataframe(df_carga)
+            if not df_filter.empty: 
+                df_carga = gerar_carga_de_dados(df_filter)
+                st.dataframe(df_carga)
 
-            # Criando o arquivo CSV em memória
-            csv_buffer = io.StringIO()
-            df_carga.to_csv(csv_buffer, header=False, index=False)
-            csv_data = csv_buffer.getvalue()  # Obtém os dados em string
+                # Criando o arquivo CSV em memória
+                csv_buffer = io.StringIO()
+                df_carga.to_csv(csv_buffer, header=False, index=False)
+                csv_data = csv_buffer.getvalue()  # Obtém os dados em string
 
             
-            # Armazena os arquivos no session_state para evitar que sejam recriados a cada reload
-            st.session_state["output_xlsx"] = output_xlsx
-            st.session_state["output_csv"] = csv_data
+                # Armazena os arquivos no session_state para evitar que sejam recriados a cada reload
+                st.session_state["output_csv"] = csv_data
 
 
 
         # Se os arquivos já foram gerados, exibe os botões de download
         if st.session_state["output_xlsx"] is not None and st.session_state["output_csv"] is not None:
-            
-            if total_vagas(vagas_nao_ocupadas) > 0:
-                st.warning(f"Ainda *existem {total_vagas(vagas_nao_ocupadas)}* vagas não ocupadas. Verifique o resultado da ocupação")
-            else:
-                st.success("Todas as vagas foram ocupadas com sucesso!")
             
             st.success(f"Processamento concluído para {curso_selecionado}! Baixe os arquivos abaixo.")
 

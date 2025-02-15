@@ -85,7 +85,13 @@ def gerar_carga_de_dados(df: pd.DataFrame):
         ```
     """
     # selecionar as colunas necessárias para a carga de dados
-    cols = ["CPF do candidato", "Campus", "Curso", "Grupo de vagas inscrito", "Grupo_vagas_chamado_", "Inscrição", "Classificação Geral"]
+    cols = ["CPF do candidato", 
+            "Campus", 
+            "Curso", 
+            "Grupo de vagas inscrito", 
+            "Grupo_vagas_chamado_", 
+            "Inscrição", 
+            "Classificacao_geral_"]
 
     df_filter = df[df["Grupo_vagas_chamado_"] != ""][cols].copy()
     campus = df_filter["Campus"].iloc[0].replace("Campus ", "").strip()
@@ -97,11 +103,18 @@ def gerar_carga_de_dados(df: pd.DataFrame):
     df_filter["ID_Edital"] = "<preenchido pelo campus>"
     df_filter["Grupo de vagas inscrito"] = df_filter["Grupo de vagas inscrito"].apply(lambda c: cota_id.get(c, 0))
     df_filter["Grupo_vagas_chamado_"] = df_filter["Grupo_vagas_chamado_"].apply(lambda c: cota_id.get(c, 0))
-    df_filter["Classificação Geral"] = df_filter["Classificação Geral"].apply(lambda i: f"{i};")
+    df_filter["Classificacao_geral_"] = df_filter["Classificacao_geral_"].apply(lambda i: f"{i};")
 
     df_filter["CPF do candidato"] = df_filter["CPF do candidato"].apply(aplicar_mascara_cpf)
 
-    order_cols = ["CPF do candidato", "ID_Campus", "ID_Curso", "ID_Edital", "Grupo de vagas inscrito", "Grupo_vagas_chamado_", "Inscrição", "Classificação Geral"]
+    order_cols = ["CPF do candidato", 
+                  "ID_Campus", 
+                  "ID_Curso", 
+                  "ID_Edital", 
+                  "Grupo de vagas inscrito",
+                  "Grupo_vagas_chamado_", 
+                  "Inscrição", 
+                  "Classificacao_geral_"]
 
     return df_filter[order_cols]
 
@@ -125,7 +138,7 @@ def inicializa_dataframe(df):
     df["Grupo_vagas_chamado_"] = ""
     df["Classificacao_geral_"] = ""
     df["Situacao_geral_"]  = ""
-    df["Log"] = ""
+    df["Info"] = ""
 
     # df["Confere_1"] = None
     # df["Confere_2"] = None
