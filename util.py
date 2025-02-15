@@ -136,7 +136,7 @@ def zerar_vagas(vagas):
 def inicializa_dataframe(df):
     df["Grupo_vagas_inicial_"] = ""
     df["Grupo_vagas_chamado_"] = ""
-    df["Classificacao_geral_"] = ""
+    df["Classificacao_geral_"] = 0
     df["Situacao_geral_"]  = ""
     df["Info"] = ""
 
